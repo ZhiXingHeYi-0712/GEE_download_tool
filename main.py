@@ -14,21 +14,29 @@ from downloadPool import DownloadPool
 pool = DownloadPool(5)
 
 # Those 2 lines below is used for setting the proxy of the code.
-# Since you know you cannot directly connected to GEE, the proxy is
+# Since you know you cannot directly connect to GEE, the proxy is
 # essential.
 socks.set_default_proxy(socks.SOCKS5, "127.0.0.1", 12345)
 socket.socket = socks.socksocket
 
+# de-comment this code if it's your first time using GEE in your PC.
+# You should finish the authenticate to start using GEE.
+# Please keep your proxy working.
+# You can comment it after authentication.
 # ee.Authenticate()
 
+# Please note that Initialize() cannot be removed or commented.
 ee.Initialize()
 
+# Invoke roi and datasets.
 guangdong_all = ee.FeatureCollection('users/zxhy1210/guangdong_all')
 roi = guangdong_all
 modis = ee.ImageCollection("MODIS/006/MOD13Q1")
 terra_climate = ee.ImageCollection("IDAHO_EPSCOR/TERRACLIMATE")
 modis_LULC = ee.ImageCollection("MODIS/006/MCD12Q1")
 
+# generate a month range list. Please see getMonthRange() 
+# docstring if you want to know more details.
 month_range_list = getMonthRange(2000, 1, 2000, 3)
 
 download_NDVI = False
@@ -36,15 +44,25 @@ download_climate = True
 download_LULC = False
 download_NDVI_year = False
 
+
+# ! Here is an example of downloading numerous images.
 if download_NDVI:
     # MODIS images download
+    # first, pick up start_date and end_date in the month_range_list
     for start_date, end_date in month_range_list:
+        # then, using filterDate(), filterBounds() and some other functions to determine the image you need.
         img: ee.Image = modis.filterDate(start_date, end_date).filterBounds(roi).max().select('NDVI')
 
+        # Then, reproject if you need.
         img = img.reproject(crs='EPSG:4326',scale=500)
         
+        # set a file name. It cannot be duplicated.
         file_name = start_date[:-2].replace('-', '_')
+
+        # print some log
         print('start download {} NDVI'.format(file_name))
+
+        # invoke downloadImage() to start your download. See `downloadImage()` for more details.
         downloadImage(img, roi, ['NDVI'], './NDVI', file_name, pool)
 
 if download_climate:
@@ -91,6 +109,6 @@ if download_NDVI_year:
         downloadImage(NDVI_year_img, roi, ['NDVI'], './NDVI_year_mean', file_name, pool)
 
 
-
+# Finally, call pool.wait() to wait all the download mission finished.
 print('Waiting...')
 pool.wait()
